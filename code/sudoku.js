@@ -1,6 +1,6 @@
-var dlx = require('./DLX.js');
+var DLX = require('./DLX.js');
 
-var DEBUG = '------- DEBUG -------';
+var DEBUG = '--------------------- DEBUG ---------------------';
 
 class Sudoku {
 
@@ -79,6 +79,9 @@ class Sudoku {
 		}
 
 		this._del_cols = del_cols.length;
+		this._del_rows = del_rows.length;
+
+		this._row_map = Array(this._rows - this._del_rows);
 
 	}
 
@@ -169,24 +172,28 @@ class Sudoku {
 
 	solve() {
 
-		var A = Array(this._rows);
-		var i, j, offset;
+		var A = Array(this._rows - this._del_rows);
+		var i, j,
+			offset_r = 0, 
+			offset_c = 0;
 		// console.log(this._cols - this._del_cols);
 		
 		for (i = 0; i < this._rows; i++) {
-			A[i] = Array(this._cols - this._del_cols);
 			if (this._matrix[i] == null || this._matrix[i] == 'undefined') {
 				// console.log('pass: ', i);
+				offset_r++;
 				continue;
 			}
+			A[i - offset_r] = Array(this._cols - this._del_cols);
+			this._row_map[i - offset_r] = i;
 			// console.log('row: ', i);
-			offset = 0;
+			offset_c = 0;
 			for (j = 0; j < this._cols; j++) {
 				if (this._matrix[i][j] == null || this._matrix[i][j] == 'undefined') {
-					offset++;
+					offset_c++;
 				}
 				else {
-					A[i][j - offset] = this._matrix[i][j];
+					A[i - offset_r][j - offset_c] = this._matrix[i][j];
 				}
 			}
 		}
@@ -199,12 +206,16 @@ class Sudoku {
 			return;
 		}
 		
-		var matrix = new dlx.Matrix(A);
-		var results = matrix.solve();
+		var dlx = new DLX.DLX(A, this._rows - this._del_rows, this._cols - this._del_cols);
+		var solved = dlx.solve(0);
 		
-		if (results[0]) {
+		if (solved) {
 			console.log('solved');
-			var solution = this._solution.concat(results[1]);
+			var dlx_sol = Array(dlx._solution.length);
+			for (i = 0; i < dlx_sol.length; i++) {
+				dlx_sol[i] = this._row_map[dlx._solution[i]];
+			}
+			var solution = this._solution.concat(dlx_sol);
 			var loc;
 			for (i = 0; i < solution.length; i++) {
 				loc = this.decodeSol(solution[i]);
@@ -212,7 +223,7 @@ class Sudoku {
 			}
 		}
 		else {
-			console.log(results);
+			console.log('failed.');
 		}
 
 		console.log(this._board);
@@ -249,4 +260,6 @@ function testSudoku() {
 
 }
 
+
+testSudoku();
 
